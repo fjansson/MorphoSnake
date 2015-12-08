@@ -170,9 +170,10 @@ def skeletonWalk(skel, visited, p, startJunction, junctions, terminals, dmap):
 
         if c > 1:
             # There is more than one unvisited neighbor, without this pixel or a neighbor being
-            # a junction. This should not happen.
+            # a junction - i.e. not in the junctions list.
+            # This can happen where two diagonal lines cross so that they form a 2x2 square.
             print("Found %d neighbors without finding a junction at (%d, %d)"%(c,x,y))
-            return (None, 'E', l, thickness, skelPixels)
+            return ((x,y), 's', l, thickness, skelPixels)
 
         if c == 0:
             # There is nowhere to go, but this isn't a terminal.
@@ -215,7 +216,7 @@ def buildTree(skel, visited, dmap, p, junctions, terminals, G):
         pp,t,l,thickness,skelPixels = skeletonWalk(skel, visited, n, p, junctions, terminals, dmap)
         l += np.hypot(n[0]-p[0],n[1]-p[1])  #add length of first step
 
-        if t in ('j', 't', 'l'):
+        if t in ('j', 't', 'l', 's'):
             thickness = np.sqrt(thickness) # get real widths, from squared ones
             G.add_edge(p, pp)
             G[p][pp]['branchlength'] = l
@@ -228,7 +229,7 @@ def buildTree(skel, visited, dmap, p, junctions, terminals, G):
             G[p][pp]['W_max']  = 2*np.max(thickness)
             G[p][pp]['W_mean'] = 2*np.mean(thickness)
             G[p][pp]['W_std']  = 2*np.std(thickness)
-        if t == 'j':
+        if t == 'j' or t == 's':
             buildTree(skel, visited, dmap, pp, junctions, terminals, G)
         #if t == 't':            
         #if t == 'l':  # this branch forms a loop. 
