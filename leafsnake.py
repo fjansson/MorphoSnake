@@ -1,6 +1,7 @@
 #!/usr/bin/env python3 
 
-# Python Morphometry. FJ 2014
+# Python Leaf Morphometry
+# Fredrik Jansson, Pirom Konglerd, Catherine Reeb 2014-2016
 # written for Python3
 
 import mahotas as mh

@@ -2,7 +2,8 @@
 
 Leafsnake is a leaf and thallus morphometry program written in Python.
 
-Authors: Fredrik Jansson (fjansson at abo point fi)
+Authors: Fredrik Jansson (fjansson at abo dot fi),
+	 Pirom Konglerd,
          Catherine Reeb
 
 
@@ -12,7 +13,7 @@ Authors: Fredrik Jansson (fjansson at abo point fi)
 ### Ubuntu and Debian-like Linux distributions
 
     sudo apt-get install git python3-numpy python3-scipy python3-matplotlib python3-pip python3-networkx \
-libjpeg-dev libpng-dev libpng12-dev libtiff4-dev libwebp-dev xcftools 
+    libjpeg-dev libpng-dev libpng12-dev libtiff4-dev libwebp-dev xcftools 
 
     sudo pip3 install mahotas imread scikit-image
 
@@ -74,9 +75,9 @@ program remember the selected root for each image beteen runs of the program.
 
 ### Keyboard commands
 
-'d' - delete node closest to pointer
-'x' - delete edge closest to pointer
-'u' - undo last action
-'r' - rebuild the graph - restoring all manually deleted nodes and edges
+* 'd' - delete node closest to pointer
+* 'x' - delete edge closest to pointer
+* 'u' - undo last action
+* 'r' - rebuild the graph - restoring all manually deleted nodes and edges
 * click a node to select it as the root
 
