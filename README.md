@@ -1,6 +1,6 @@
-# Leafsnake
+# MorphoSnake
 
-Leafsnake is a leaf and thallus morphometry program written in Python.
+MorphoSnake is a leaf and thallus morphometry program written in Python.
 
 Authors: Fredrik Jansson (fjansson at abo dot fi),
 	 Pirom Konglerd,
@@ -26,7 +26,7 @@ Authors: Fredrik Jansson (fjansson at abo dot fi),
 
 ## Usage and Measurements
 
-Leafsnake operates on images of leaves or other branched structures, and is used to extract features from the structure.
+MorphoSnake operates on images of leaves or other branched structures, and is used to extract features from the structure.
 
 The image is skeletonized using the Zhang-Suen skeletonization method, as implemented in [scikit image](http://scikit-image.org/docs/dev/api/skimage.morphology.html#skimage.morphology.skeletonize)
 
@@ -61,7 +61,7 @@ For the edges and nodes in the graph, the following measurements are collected.
 ## Image resolution data base
 
 In order to report measurement results in physical units, the program needs to know the resolution of the input image.
-The resolution, in pixels per mm, and optionally other properties, are stored in a JSON file, `leaves.json`, in the same directory as the leafsnake script.
+The resolution, in pixels per mm, and optionally other properties, are stored in a JSON file, `leaves.json`, in the same directory as the MorphoSnake script.
 
     "imagename": {
         "px_mm": 430.0
@@ -81,3 +81,7 @@ program remember the selected root for each image beteen runs of the program.
 * 'r' - rebuild the graph - restoring all manually deleted nodes and edges
 * click a node to select it as the root
 
+### License
+
+MorphoSnake is released under the GNU General Public License v3.0,
+see the file LICENSE for details.

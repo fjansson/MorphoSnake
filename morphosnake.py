@@ -1,7 +1,11 @@
 #!/usr/bin/env python3 
-
-# Python Leaf Morphometry
-# Fredrik Jansson, Pirom Konglerd, Catherine Reeb 2014-2016
+#
+# MorphoSnake - Python Morphometry program for 2D shapes
+#
+# Fredrik Jansson, Pirom Konglerd, Catherine Reeb 2014-2017
+# Released under the GNU General Public License v3.0.
+# https://github.com/fjansson/MorphoSnake
+#
 # written for Python3
 
 import mahotas as mh
