@@ -15,13 +15,15 @@ Authors: Fredrik Jansson (fjansson at abo dot fi),
     sudo apt-get install git python3-numpy python3-scipy python3-matplotlib python3-pip python3-networkx \
     libjpeg-dev libpng-dev libpng12-dev libtiff4-dev libwebp-dev xcftools 
 
-    sudo pip3 install mahotas imread scikit-image
+    sudo pip3 install mahotas imread scikit-image    
 
 ### Arch Linux
 
     sudo pacman -S python-pip python-numpy python-scipy python-matplotlib python-networkx
     sudo pip install mahotas imread scikit-image
 
+Please note: MorphoSnake currently depends on networkx version 1.x, while some distributions already ship 2.0.
+Until MorphoSnake is updated, networkx 1.x can be installed locally, e.g. in a virtual environment, with pip3 install 'networkx<2.0'.
 
 
 ## Usage and Measurements
