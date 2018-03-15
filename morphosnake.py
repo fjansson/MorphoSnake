@@ -441,6 +441,20 @@ def deleteNode(G, p):
     print('deleteNode (%5.1f, %5.1f)'%p)
     p = findClosest(G.nodes(), p)
     print('closest node is (%5.1f, %5.1f)'%p)
+
+    parent = G.node[p]['parent']
+    for n in G.neighbors(p):
+        if n!=parent:
+            G.add_edge(n,parent)
+            G[parent][n]['branchlenght'] = G[parent][p]['branchlenght']+G[p][n]['branchlenght']
+            G[parent][n]['branchlenght_e'] = np.sqrt(distsq(parent,n))
+            G[parent][n]['skelPixels'] = G[parent][p]['skelPixels'] + G[p][n]['skelPixels']
+            G[parent][n]['W_min'] = min(G[parent][p]['W_min'], G[p][n]['W_min'])
+            G[parent][n]['W_max'] = max(G[parent][p]['W_max'], G[p][n]['W_max'])
+            G[parent][n]['W_mean'] = (G[parent][p]['W_mean']+G[p][n]['W_mean'])/2
+            G[parent][n]['W_std'] = (G[parent][p]['W_std']+G[p][n]['W_std'])/2
+            print("added edge")
+            
     G.remove_node(p)
 
 
@@ -473,7 +487,7 @@ def plot_graph(G):
     # there seems to be no way to use that directly.  Also make dictionary
     # of node labels
 
-    for p in G.nodes_iter():
+    for p in G.nodes:
         pos[p] = p
         #nlabels[p] = "%.1f"%G.node[p]['dia']
         nlabels[p] = "%d"%G.node[p]['Strahler']
@@ -922,7 +936,7 @@ def keypress(event):
             print('Cannot remove the root.')
             return
         undo_stack.append((G.copy(), root))
-        G.remove_node(p)
+        deletenode(G,p)
 
         updateMeasures(G, root)
         plot_graph(G)        
@@ -997,7 +1011,6 @@ print('Saving the database...')
 of = open(leavesFile, "wt")
 json.dump(leaves, of, sort_keys=True, indent=2, separators=(',', ': '))
 print('done.')
-
 
 
 
