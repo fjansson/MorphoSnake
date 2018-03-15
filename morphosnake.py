@@ -33,6 +33,7 @@ background_color = (0.2,0.2,0.2)
 leaf_color = (0.1,0.5,0)
 skel_color = (0.2,0.9,0)
 node_color = (1.0,0.2,1)
+node_color_fertile = (1.0,1.0,0.0)
 node_alpha = 0.8
 node_edge_color = 'magenta'
 edge_color = 'magenta'
@@ -79,6 +80,7 @@ def distToSet(s, p):
 def findClosest(s, p):
     ds = [distsq(p, q) for q in s]
     return s[ds.index(min(ds))]
+   
 
 
 # find terminals and junctions, by counting 01 crossings in the neighborhood.
@@ -244,7 +246,7 @@ def buildTree(skel, visited, dmap, p, junctions, terminals, G):
 # plot all edges in the graph G
 # but better to use networkx's builtin plots
 def plotG(G):
-    for e in G.edges_iter():
+    for e in G.edges():
         plt.plot((e[0][0], e[1][0]), (e[0][1], e[1][1]), 'c-')
 
 
@@ -265,10 +267,10 @@ def plotG(G):
 
 def StrahlerOrder(G, root):
     # initialize all nodes to 1
-    for p in G.nodes_iter():
+    for p in G:
         G.node[p]['Strahler'] = 1
         G.node[p]['level'] = 0      # longest path from this node to a leaf - leaves have level 1.
-        
+    
     nodes = nx.dfs_postorder_nodes(G, root)
     for p in nodes:
         neigh = nx.all_neighbors(G, p)
@@ -286,14 +288,14 @@ def StrahlerOrder(G, root):
         G.node[p]['level'] = level + 1 
         
     # assign Strahler orders to edges too
-    for e in G.edges_iter():
+    for e in G.edges():
         s = min(G.node[e[0]]['Strahler'], G.node[e[1]]['Strahler'])
-        G.edge[e[0]] [e[1]] ['Strahler'] = s
+        G[e[0]] [e[1]] ['Strahler'] = s
         s = min(G.node[e[0]]['level'], G.node[e[1]]['level'])
-        G.edge[e[0]] [e[1]] ['level'] = s
+        G[e[0]] [e[1]] ['level'] = s
 
     # determine the parent of each node, based on the node 'level'
-    for n in G.nodes_iter():
+    for n in G:
         m = 0
         p = None
         for n2 in G[n]:
@@ -354,19 +356,19 @@ def angle(a, b, c):
     
 # measure node diameters
 def measureDia(G, dmap):
-    for n in G.nodes_iter():
+    for n in G:
         # d1 = maxDisk(im, n) # find disks manually 
         x,y = n
         d = 2*np.sqrt(dmap[y][x]) 
         G.node[n]['dia'] = d
 
 def measureApicalDist(G):
-    for n in G.nodes_iter():
+    for n in G:
         # measure apical distance
         # we need it only for terminal nodes, but we measure for all nodes
         # so that all nodes have the same keys
         r = 1000000
-        for n2 in G.nodes_iter():
+        for n2 in G:
             if G.node[n2]['level'] == 1 and n2 != n:
                 r = min(r, dist(n, n2))
         G.node[n]['apicaldist'] = r
@@ -377,10 +379,10 @@ def measureApicalDist(G):
 def measureAngles(G):
     # for each edge, create a dictionary mapping end point to theta angle
     # e[2] is the data dictionary associated with each edge
-    for e in G.edges_iter(data=True):
+    for e in G.edges(data=True):
         e[2]['theta'] = {}
     
-    for n in G.nodes_iter():
+    for n in G:
         # iterate over neighbors, determine angle to every one
         d = G.node[n]['dia']
         for n2 in G[n]:
@@ -427,9 +429,9 @@ def measureAngles(G):
 # return a list of the removed nodes
 def cleanup(G, root, minLength=5, minDia=8, maxRemoveLen = 20):
     removed = []
-    for n in G.nodes_iter():
+    for n in G:
         if G.degree(n) == 1 and n != root:
-            p = G.neighbors(n)[0] #the parent (only neighbor)
+            p = list(G.neighbors(n))[0] #the parent (only neighbor)
             if G[n][p]['branchlength'] < minLength or (G.node[n]['dia'] < minDia and G[n][p]['branchlength'] < maxRemoveLen):
                 removed.append(n)
     G.remove_nodes_from(removed)
@@ -439,15 +441,15 @@ def cleanup(G, root, minLength=5, minDia=8, maxRemoveLen = 20):
 # find the node in G closest to p and delete it
 def deleteNode(G, p):
     print('deleteNode (%5.1f, %5.1f)'%p)
-    p = findClosest(G.nodes(), p)
+    p = findClosest(list(G.nodes()), p)
     print('closest node is (%5.1f, %5.1f)'%p)
 
     parent = G.node[p]['parent']
     for n in G.neighbors(p):
         if n!=parent:
             G.add_edge(n,parent)
-            G[parent][n]['branchlenght'] = G[parent][p]['branchlenght']+G[p][n]['branchlenght']
-            G[parent][n]['branchlenght_e'] = np.sqrt(distsq(parent,n))
+            G[parent][n]['branchlength'] = G[parent][p]['branchlength']+G[p][n]['branchlength']
+            G[parent][n]['branchlength_e'] = np.sqrt(distsq(parent,n))
             G[parent][n]['skelPixels'] = G[parent][p]['skelPixels'] + G[p][n]['skelPixels']
             G[parent][n]['W_min'] = min(G[parent][p]['W_min'], G[p][n]['W_min'])
             G[parent][n]['W_max'] = max(G[parent][p]['W_max'], G[p][n]['W_max'])
@@ -493,7 +495,7 @@ def plot_graph(G):
         nlabels[p] = "%d"%G.node[p]['Strahler']
         rad.append(G.node[p]['dia'] * .5)
         
-    #for e in G.edges_iter():
+    #for e in G.edges():
         #elabels[e] = G.edge[e[0]][e[1]]['Strahler']
         #elabels[e] = G.edge[e[0]][e[1]]['level']
         #if G.edge[e[0]][e[1]]['alpha'] == None:
@@ -501,7 +503,7 @@ def plot_graph(G):
         #else:
         #    elabels[e] = "%.0f"%(G.edge[e[0]][e[1]]['alpha']*180/np.pi) 
     
-    nodes = nx.draw_networkx_nodes(G, pos, node_color=node_color)
+    nodes = nx.draw_networkx_nodes(G, pos, node_color = [G.node[p]['fertile_color'] for p in G])
     plt.setp(nodes, edgecolors=node_edge_color, picker=True)
     
     edges = nx.draw_networkx_edges(G, pos, width = edge_width, alpha=edge_alpha, edge_color=edge_color)
@@ -533,12 +535,12 @@ def saveTreeText(G, edgeName, nodeName):
         nheader += k + ', ' 
     
     output = [[e[2][k] * (conversion[k] if k in conversion else 1)
-               for k in edge_keys] for e in G.edges_iter(data=True)]
+               for k in edge_keys] for e in G.edges(data=True)]
     output.sort() # sort on Strahler order
     np.savetxt(edgeName, output, fmt = '%3d,%3d' + (len(edge_keys)-2) * ', %8.3f', header=eheader, comments='#')
 
     output = [[n[1][k] * (conversion[k] if k in conversion else 1) 
-               for k in node_keys] for n in G.nodes_iter(data=True)]
+               for k in node_keys] for n in G.nodes(data=True)]
     output.sort() # sort on Strahler order
     np.savetxt(nodeName, output, fmt = '%3d,%3d' + (len(node_keys)-2) * ', %8.3f', header=nheader, comments='#')
 
@@ -567,7 +569,7 @@ def report(G):
             data_t[k]  = []
             data_nt[k] = []
             
-            for e in G.edges_iter(data=True):
+            for e in G.edges(data=True):
                 v = e[2][k]
                 if e[0] != root and e[1] != root:
                     # this edge does not go to the root
@@ -584,14 +586,14 @@ def report(G):
             data_nt[k] = np.array(data_nt[k])
         else:
             #standard treatment, keep all edges
-            data[k]    = np.array([e[2][k] for e in G.edges_iter(data=True) ])
-            data_t[k]  = np.array([e[2][k] for e in G.edges_iter(data=True) if e[2]['level'] == 1])
-            data_nt[k] = np.array([e[2][k] for e in G.edges_iter(data=True) if e[2]['level'] != 1])
+            data[k]    = np.array([e[2][k] for e in G.edges(data=True) ])
+            data_t[k]  = np.array([e[2][k] for e in G.edges(data=True) if e[2]['level'] == 1])
+            data_nt[k] = np.array([e[2][k] for e in G.edges(data=True) if e[2]['level'] != 1])
         
     for k in node_keys:
-        data[k]    = np.array([n[1][k] for n in G.nodes_iter(data=True) ])
-        data_t[k]  = np.array([n[1][k] for n in G.nodes_iter(data=True) if n[1]['level'] == 1])
-        data_nt[k] = np.array([n[1][k] for n in G.nodes_iter(data=True) if n[1]['level'] != 1])
+        data[k]    = np.array([n[1][k] for n in G.nodes(data=True) ])
+        data_t[k]  = np.array([n[1][k] for n in G.nodes(data=True) if n[1]['level'] == 1])
+        data_nt[k] = np.array([n[1][k] for n in G.nodes(data=True) if n[1]['level'] != 1])
                 
         
     # convert to degrees from radians
@@ -699,6 +701,10 @@ def findClosestEdge(G, p):
             emin = e
     return emin
 
+def initializeColorNode(G):
+    for p in G:
+        G.node[p]['fertile_color'] = node_color
+        G.node[p]['fertile'] = False
 
 ###################################################################################
 # Main code starts here
@@ -852,7 +858,7 @@ def buildGraph(img, skel):
     print('Building tree...')
     G = nx.Graph()
     visited = np.zeros_like(skel) # a new array of zeros, same dimensions as skel
-
+    
     print('  distance transform...')
     dmap = mh.distance(img)
 
@@ -869,7 +875,7 @@ def buildGraph(img, skel):
         plt.gca().add_patch(plt.Circle((x,y), radius=4, alpha=.4))
 
     updateMeasures(G, root)
-
+    initializeColorNode(G)
     print('Done.')
     return G
 
@@ -891,7 +897,7 @@ rad=[]
 plot_graph(G)
 
 # semi-transparent circles on the nodes
-for p,r in zip(G.nodes_iter(), rad):
+for p,r in zip(G, rad):
     plt.gca().add_patch(plt.Circle(p, radius=r, alpha=terminal_disk_alpha, color=terminal_disk_color))
 
 root_patch = plt.Circle(root, radius=40, alpha=root_disk_alpha, color=root_disk_color)
@@ -930,13 +936,13 @@ def keypress(event):
     #print('press', event.key)
     sys.stdout.flush()
     if event.key=='d': # delete closest node
-        p = findClosest(G.nodes(), (event.xdata, event.ydata))
+        p = findClosest(list(G.nodes()), (event.xdata, event.ydata))
         print('closest node is (%5.1f, %5.1f)'%p)
         if p == root:
             print('Cannot remove the root.')
             return
         undo_stack.append((G.copy(), root))
-        deletenode(G,p)
+        deleteNode(G,p)
 
         updateMeasures(G, root)
         plot_graph(G)        
@@ -968,13 +974,22 @@ def keypress(event):
         G = buildGraph(img, skel)
         plot_graph(G)
         fig.canvas.draw()
+
+    if event.key=='c': #marking of fertile nodes
+        p = findClosest(list(G.nodes()), (event.xdata, event.ydata))
+        print('closest node is (%5.1f, %5.1f)'%p)
+        undo_stack.append((G.copy(),root))
+        G.node[p]['fertile_color'] = node_color_fertile
+        G.node[p]['fertile'] = True
+        plot_graph(G)
+        fig.canvas.draw()
         
 # register the event callback functions
 fig.canvas.mpl_connect('pick_event', onpick)
 fig.canvas.mpl_connect('key_press_event', keypress)
     
 # plot disks for the apical distance, just for testing
-# for n in G.nodes_iter():
+# for n in G:
 #    if G.node[n]['level'] == 1:
 #        r = G.node[n]['apicaldist']
 #        plt.gca().add_patch(plt.Circle(n, radius=r, alpha=.4))
