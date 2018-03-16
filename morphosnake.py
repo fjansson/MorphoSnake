@@ -918,7 +918,7 @@ def onpick(event):
    
     # for some reason it's difficult to get the coordinates of the clicked node
     # so we use mouse coordinates and search for the closest node.
-    root = findClosest(G.nodes(), (event.mouseevent.xdata, event.mouseevent.ydata))
+    root = findClosest(list(G.nodes()), (event.mouseevent.xdata, event.mouseevent.ydata))
     print('New root: ' + str(root))
     setRoot(root)
     updateMeasures(G, root)
@@ -933,7 +933,7 @@ undo_stack = []
 # a function called on keypress events
 def keypress(event):
     global nodes, edges, node_labels, G, root
-    #print('press', event.key)
+    print('press', event.key)
     sys.stdout.flush()
     if event.key=='d': # delete closest node
         p = findClosest(list(G.nodes()), (event.xdata, event.ydata))
@@ -983,6 +983,16 @@ def keypress(event):
         G.node[p]['fertile'] = True
         plot_graph(G)
         fig.canvas.draw()
+
+    if event.key == 'a': # diameter modification
+        p = findClosest(list(G.nodes()), (event.xdata, event.ydata))
+        print('closest node is (%5.1f, %5.1f)'%p)
+        undo_stack.append((G.copy(),root))
+        G.node[p]['dia'] = dist(p,(event.xdata,event.ydata))
+        #updateMeasures(G, root)
+        plot_graph(G)        
+        fig.canvas.draw()        
+            
         
 # register the event callback functions
 fig.canvas.mpl_connect('pick_event', onpick)
@@ -1026,7 +1036,6 @@ print('Saving the database...')
 of = open(leavesFile, "wt")
 json.dump(leaves, of, sort_keys=True, indent=2, separators=(',', ': '))
 print('done.')
-
 
 
 
