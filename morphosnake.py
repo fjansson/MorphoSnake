@@ -1269,6 +1269,7 @@ def keypress(event):
         G.node[p]['node_color'] = node_color_fertile
         G.node[p]['fertile'] = True
         G[p][G.node[p]['parent']]['fertile'] = True
+        report(G)
         plot_graph(G)
         fig.canvas.draw()
 
@@ -1280,7 +1281,8 @@ def keypress(event):
             if G.node[p]['node_color'] != node_color:
                 G.node[p]['node_color'] = node_color
                 plot_graph(G)
-                fig.canvas.draw() 
+                fig.canvas.draw()
+        report(G)
 
 
     if event.key == 'b': # diameter modification
@@ -1327,8 +1329,8 @@ def saveReport(reportFile, report_text, header_text):
     try:
         f = open(reportFile, 'at')
         if not present:
-            f.write(header_text+'\n')
-        f.write(report_text+'\n')
+            f.write(header_text+'\n'+'\n')
+        f.write(report_text+'\n'+'\n')
     except:
         print('Error when saving the report')
 
@@ -1341,6 +1343,7 @@ print('Saving the database...')
 of = open(leavesFile, "wt")
 json.dump(leaves, of, sort_keys=True, indent=2, separators=(',', ': '))
 print('done.')
+
 
 
 
