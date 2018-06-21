@@ -1216,18 +1216,7 @@ def buildGraph(img, skel):
     print('Done.')
     return G
 
-# read in the graph from a previous run, if it exists
-try:
-    G=nx.read_gpickle(path_basename+'_graph.pkl')
-    print('Loaded graph from ' + path_basename + '_graph.pkl')
-    print('Graphs created by an older version of this software wont load, please delete ' + path_basename + '_graph.pkl file and retry in case of error.')
-except:
-    # could not read the graph. Constructing it now
-    G = buildGraph(img, skel)
-
-#Lets check for Loops:
-
-if(len(contours)>2):
+def loopSolution(G,skel,img):
     print("Image with Loops detected, attempting automatic unLooping")
     alpha = np.pi - findAngleMoy(G)
     img = finalStrat(img,contours,alpha,np.pi/5,root)
@@ -1239,30 +1228,45 @@ if(len(contours)>2):
     t, j = terminals(skel)
     skel2 = skel
     skel  = np.ma.masked_where(skel==0, skel)
-    fig = plt.figure()
-    width = skel.shape[1]
-    height= skel.shape[0]
-    
-    plt.axis((0,width,height,0))
-    plt.imshow(~img, cmap=leaf_colors, interpolation="nearest")
-    plt.imshow(skel, cmap=skel_colors,  interpolation="nearest")
-   
+
+    return img,skel,skel2,fig,t,j
+        
+
+                 
+
+# read in the graph from a previous run, if it exists
+try:
+    G=nx.read_gpickle(path_basename+'_graph.pkl')
+    print('Loaded graph from ' + path_basename + '_graph.pkl')
+    print('Graphs created by an older version of this software wont load, please delete ' + path_basename + '_graph.pkl file and retry in case of error.')
+    if(len(contours)>2):
+        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
+        
+except:
+    # could not read the graph. Constructing it now
     G = buildGraph(img, skel)
+    if(len(contours)>2):
+        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
+        G = buildGraph(img, skel)
+    if(len(contours)>2):
+        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
+        G = buildGraph(img, skel)
+    
+#Lets check for Loops:
+
+   
 
 # Copied from 1170 to test
 # Plot images. Inversion here is just for nicer coloring
 # interpolation=nearest is to turn smoothing off.
-else:
-    width = skel.shape[1]
-    height= skel.shape[0]
 
-    plt.axis((0,width,height,0))
+width = skel.shape[1]
+height= skel.shape[0]
 
-    plt.imshow(~img, cmap=leaf_colors, interpolation="nearest")
+plt.axis((0,width,height,0))
+plt.imshow(~img, cmap=leaf_colors, interpolation="nearest")
+plt.imshow(skel, cmap=skel_colors,  interpolation="nearest")
 
-    plt.imshow(skel, cmap=skel_colors,  interpolation="nearest")
-    #plt.imshow(visited, cmap=mpl.cm.cool,  interpolation="nearest")
-   
 
 # handles to plot elements
 nodes = None
@@ -1293,7 +1297,7 @@ def updateCircles(G,C):
 	if p not in G.nodes():
 		Cercle[p].remove()
 	else:
-		Cercle[p].remove()
+ 		Cercle[p].remove()
 		Cercle[p] = plt.Circle(p, radius=G.node[p]['dia'], alpha=terminal_disk_alpha, color=terminal_disk_color)
 		plt.gca().add_patch(Cercle[p])
 '''
@@ -1302,7 +1306,8 @@ def updateCircles(G,C):
            C[p].set_visible(False)
        else:
            C[p].set_visible(False)
-           C[p] = plt.Circle(p, radius=G.node[p]['dia_2']/2, alpha=terminal_disk_alpha, color=terminal_disk_color)
+           # REVIEW DIA2 TO DIA
+           C[p] = plt.Circle(p, radius=G.node[p]['dia']/2, alpha=terminal_disk_alpha, color=terminal_disk_color)
            plt.gca().add_patch(C[p])
 
 updateCircles(G,Cercle)
