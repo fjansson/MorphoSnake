@@ -21,6 +21,11 @@ import os.path
 import pickle
 import cv2
 
+# angle constant, and distance constant for superposition treatement
+
+d_alpha = np.pi/8
+d_pixels = 15 
+
 
 # list of all keys measuring lengths - these are scaled with px_mm
 length_keys = ['dia', 'dia_2', 'branchlength', 'branchlength_e', 'W_mean', 'W_max', 'W_min', 'W_std', 'apicaldist',]
@@ -28,8 +33,6 @@ length_keys = ['dia', 'dia_2', 'branchlength', 'branchlength_e', 'W_mean', 'W_ma
 # list of all keys measuring angles - these are converted to degrees
 angle_keys = ['alpha', 'alpha_e']
 
-# list of all tags possible for a node
-#node_tags = ['male','female','fertile']
 
 
 # colors and other visual settings
@@ -39,6 +42,7 @@ skel_color = (0.2,0.9,0)
 contour_color = (0,0,0.9)
 node_color = (1.0,0.2,1)
 node_color_fertile = (1.0,1.0,0.0)
+node_color_cut = (0.5,0.5,0.7)
 node_color_carac = (1.0,0.0,0.0)
 node_alpha = 0.8
 node_edge_color = 'magenta'
@@ -62,7 +66,6 @@ contour_colors = matplotlib.colors.ListedColormap([contour_color])
 def neighbours(i, x, y):
     '''Return 8-neighbours of point p1 of picture, in order'''
     x1, y1, x_1, y_1 = x+1, y-1, x-1, y+1
-    #print((x,y))
     return [i[y+1][x], i[y+1][x+1], i[y][x+1], i[y-1][x+1],  # P2,P3,P4,P5
             i[y-1][x], i[y-1][x-1], i[y][x-1], i[y+1][x-1]]  # P6,P7,P8,P9
 
@@ -247,6 +250,7 @@ def buildTree(skel, visited, dmap, p, junctions, terminals, G):
             G[p][pp]['W_mean'] = 2*np.mean(thickness)
             G[p][pp]['W_std']  = 2*np.std(thickness)
             G[p][pp]['fertile'] = False  # initialization of fertile properties of edges as False
+            G[p][pp]['cut'] = False #to mark cut nodes in superposition cases
         if t == 'j' or t == 's':
             buildTree(skel, visited, dmap, pp, junctions, terminals, G)
         #if t == 't':            
@@ -563,8 +567,9 @@ def report(G):
             
             for e in G.edges(data=True):
                 v = e[2][k]
-                if e[0] != root and e[1] != root:
+                if e[0] != root and e[1] != root and e[2]['cut'] == False and e[2]['cut'] == False:
                     # this edge does not go to the root
+                    # and is not a cut edge
                     # add the data to the appropriate lists
                     data[k].append(v)
                     if e[2]['fertile']:
@@ -574,7 +579,7 @@ def report(G):
                     else:
                         data_nt[k].append(v)
                 # else:
-                #     print ('Excluded ' + str(v))
+                #  print ('Excluded ' + str(v))
             data[k] = np.array(data[k])
             data_t[k] = np.array(data_t[k])
             data_nt[k] = np.array(data_nt[k])
@@ -634,8 +639,12 @@ def report(G):
         std_t[k]  = np.std(data_t[k])
         avg_nt[k] = np.average(data_nt[k])
         std_nt[k] = np.std(data_nt[k])
-        avg_f[k]  = np.average(data_f[k])
-        std_f[k]  = np.std(data_f[k])
+        if(len(data_f) >0):
+            avg_f[k]  = np.average(data_f[k])
+            std_f[k]  = np.std(data_f[k])
+        else:
+            avg_f[k]  = -1
+            std_f[k]  = -1
         
     print('                      all      |     terminals   |  non-terminals  |    fertile')
     print('      parameter   avg    std   |    avg    std   |    avg    std   |   avg    std')    
@@ -779,13 +788,14 @@ def addNodeSkel(G,p,skel,junctions,terminals,dmap):
     G.node[p]['dia_2'] = d # must be changed
     G.node[p]['node_color'] = node_color
     G.node[p]['fertile'] = False
+    G.node[p]['cut'] = False
 
 
 def initializeColorNode(G):
     for p in G:
         G.node[p]['node_color'] = node_color
         G.node[p]['fertile'] = False
-        G.node[p]['tag'] = []
+        G.node[p]['cut'] = False
 
 def fourNeighbours(i,x,y):
     return [i[y+1][x], i[y][x+1], i[y-1][x], i[y][x-1]]
@@ -913,8 +923,8 @@ def MoyAngleStrahler(G):
         for i in range(len(liste_e[x])):
             add_e += liste_e[x][i]
         moyAngle_e.append(add_e/len(liste_e[x]))
-    print(moyAngle)
-    print(moyAngle_e)
+    return moyAngle,moyAngle_e
+    #A MODIFIER!!!!
 
 #find the equation of the straight line given a point and an angle
 
@@ -924,16 +934,13 @@ def lineEqAngle(p,alpha):
     n = y_p - m * x_p
     return m,n
 
-def findCone(shape,p,alpha,d_alpha):
+def findCone(shape,p,alpha,d_alpha,eps):
     m1,n1 = lineEqAngle(p,alpha-d_alpha)
     m2,n2 = lineEqAngle(p,alpha+d_alpha)
     s = []
     for (x_n, y_n) in shape:
-        if y_n > m1 * x_n + n1 and y_n < m2 * x_n + n2:
+        if y_n > m1*x_n + n1 and y_n < m2 * x_n + n2 and dist(p,(x_n,y_n)) > eps:
             s.append((x_n, y_n))
-    #print("call to find cone")
-    #print('Node (%5.1f, %5.1f)'%p)
-    #print(s)
     return s
 
 # p is an (x, y) tuple, s is a list of (x, y) tuples .
@@ -959,32 +966,34 @@ def contourToList(contours):
 
 def colorLine(img,p,q):
     x1,y1 = p
-    x2,y2 =q
+    x2,y2 = q
     coords = bresenham(x1,y1,x2,y2)
     for i in range(0,len(coords)):
         x,y = coords[i]
         img[y][x-2] = False
-        img[y][x-1] = False
-        img[y][x] = False
+        img[y][x-1] =  False
+        img[y][x] =  False
         img[y][x+1] = False
         img[y][x+2] = False
     return img
 
-def finalStrat(img,contours,alpha,d_alpha,root):
+def finalStrat(img,contours,alpha,d_alpha,root,eps):
     shape,shape_all = contourToList(contours)
+    cutPoints = []
     for i in range(1,len(shape)):
         pClose = findClosest(shape[i],root)
-        p = findFurthest(shape[i],root)
+        p = findFurthest(shape[i],pClose)
         if(pClose[1] < p[1]):
-            k = findCone(shape_all,p,alpha,d_alpha)
+            k = findCone(shape_all,p,alpha,d_alpha,eps)
         else:
-            k = findCone(shape_all,p,-alpha,d_alpha)
+            k = findCone(shape_all,p,-alpha,d_alpha,eps)
         q = findClosest(k,p)
         img = colorLine(img,p,q)
-    width = img.shape[1]
-    height= img.shape[0]
-    return img
+        cutPoints.append((p,q))
 
+    return img, cutPoints
+
+#Bresenham's algorithm to find pixels in a line between two points
 #https://mail.scipy.org/pipermail/scipy-user/2009-September/022602.html
 
 def bresenham(x,y,x2,y2):
@@ -1019,6 +1028,20 @@ def findAngleMoy(G):
             if G[n][n2]['Strahler'] != 1:
                 angle.append(G[n][n2]['alpha'])
     return np.median(np.array(angle))
+
+
+
+def markCutPoints(G,cutPoints,eps):
+    for i in cutPoints:
+        p,q = i
+        for n in G:
+            if (dist(n,p) < eps) or (dist(n,q) < eps):
+                G.node[n]['cut'] = True
+                G.node[n]['node_color'] = node_color_cut
+
+
+            
+            
 
 ###################################################################################
 # Main code starts here
@@ -1086,12 +1109,9 @@ print('Reading image %s'%filename)
 img = mh.imread(filename)
 
 #Finding the contours of the image, useful to remark loops 
-
 imgray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 ret, thresh = cv2.threshold(imgray, 127, 255, 0)
 im2, contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
-
-
 
 # color image handling - works if the background is brighter than the object
 if len(img.shape) == 3: #color image
@@ -1104,7 +1124,7 @@ T_otsu = mh.otsu(img) # finds a numeric threshold
 img = (img > T_otsu)  # make image binary
 
 # invert the image (just because the test image is stored the other way)
-img = ~img 
+img = ~img
 
 # close single-pixel holes. Also makes the skeletonization much more well-behaved,
 # with less tiny branches close to terminals.
@@ -1158,25 +1178,8 @@ skel    = np.ma.masked_where(skel==0, skel)
 #visited = np.ma.masked_where (visited==0, visited)
 
 fig = plt.figure()
-fig2 = fig
-'''
-# Plot images. Inversion here is just for nicer coloring
-# interpolation=nearest is to turn smoothing off.
 
-width = skel.shape[1]
-height= skel.shape[0]
-
-plt.axis((0,width,height,0))
-
-plt.imshow(~img, cmap=leaf_colors, interpolation="nearest")
-#plt.imshow(np.sqrt(dmap), cmap=mpl.cm.jet_r, interpolation="nearest")
-
-plt.imshow(skel, cmap=skel_colors,  interpolation="nearest")
-#plt.imshow(visited, cmap=mpl.cm.cool,  interpolation="nearest")
-
-'''
-# Find the contour of the image:
-contour = findContour(~img)
+superposed = False
 
 # update measures that depend on graph structure or root placement
 def updateMeasures(G, root):
@@ -1191,10 +1194,8 @@ def buildGraph(img, skel):
     print('Building tree...')
     G = nx.Graph()
     visited = np.zeros_like(skel) # a new array of zeros, same dimensions as skel
-    
-    print('  distance transform...')
     dmap = mh.distance(img)
-
+    
     print('  constructing tree...')
     buildTree(skel, visited, dmap, root, j, t, G)
 
@@ -1206,7 +1207,6 @@ def buildGraph(img, skel):
     # show (automatically) removed nodes
     for x,y in removed:
         plt.gca().add_patch(plt.Circle((x,y), radius=4, alpha=.4))
-
     updateMeasures(G, root)
 
     # measure node diameters 2
@@ -1214,49 +1214,45 @@ def buildGraph(img, skel):
     
     initializeColorNode(G)
     print('Done.')
+
     return G
 
 def loopSolution(G,skel,img):
     print("Image with Loops detected, attempting automatic unLooping")
     alpha = np.pi - findAngleMoy(G)
-    img = finalStrat(img,contours,alpha,np.pi/5,root)
-    print('alpha')
-    print(alpha)
+    img,cutPoints = finalStrat(img,contours,alpha,d_alpha,root,d_pixels)
     print('Thinning...')
     skel = morphology.skeletonize(img)
     print('Features...')
     t, j = terminals(skel)
     skel2 = skel
     skel  = np.ma.masked_where(skel==0, skel)
-
-    return img,skel,skel2,fig,t,j
+    return img,skel,skel2,t,j,cutPoints
         
 
-                 
+contour = findContour(img)
 
-# read in the graph from a previous run, if it exists
-try:
-    G=nx.read_gpickle(path_basename+'_graph.pkl')
-    print('Loaded graph from ' + path_basename + '_graph.pkl')
-    print('Graphs created by an older version of this software wont load, please delete ' + path_basename + '_graph.pkl file and retry in case of error.')
-    if(len(contours)>2):
-        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
-        
-except:
-    # could not read the graph. Constructing it now
+if(len(contours)>2):
+    superposed = True
+    print("image with loops detected, useless to use an older graph, constructing the graph")
     G = buildGraph(img, skel)
     if(len(contours)>2):
-        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
+        img,skel,skel2, t,j, cutPoints = loopSolution(G,skel,img)
         G = buildGraph(img, skel)
-    if(len(contours)>2):
-        img,skel,skel2,fig,t,j = loopSolution(G,skel,img)
+        contour = findContour(img)
+        markCutPoints(G,cutPoints,20)
+else:
+    # read in the graph from a previous run, if it exists
+    try:
+        G=nx.read_gpickle(path_basename+'_graph.pkl')
+        print('Loaded graph from ' + path_basename + '_graph.pkl')
+        print('Graphs created by an older version of this software wont load, please delete ' + path_basename + '_graph.pkl file and retry in case of error.')
+        
+    except:
+        # could not read the graph. Constructing it now
         G = buildGraph(img, skel)
     
-#Lets check for Loops:
-
-   
-
-# Copied from 1170 to test
+        
 # Plot images. Inversion here is just for nicer coloring
 # interpolation=nearest is to turn smoothing off.
 
@@ -1293,26 +1289,18 @@ plt.gca().add_patch(select_patch)
 
 
 def updateCircles(G,C):
-   ''' for p in G:
-	if p not in G.nodes():
-		Cercle[p].remove()
-	else:
- 		Cercle[p].remove()
-		Cercle[p] = plt.Circle(p, radius=G.node[p]['dia'], alpha=terminal_disk_alpha, color=terminal_disk_color)
-		plt.gca().add_patch(Cercle[p])
-'''
    for p in C:
        if p not in G:
            C[p].set_visible(False)
        else:
            C[p].set_visible(False)
            # REVIEW DIA2 TO DIA
-           C[p] = plt.Circle(p, radius=G.node[p]['dia']/2, alpha=terminal_disk_alpha, color=terminal_disk_color)
+           C[p] = plt.Circle(p, radius=G.node[p]['dia_2']/2, alpha=terminal_disk_alpha, color=terminal_disk_color)
            plt.gca().add_patch(C[p])
 
 updateCircles(G,Cercle)
             
-MoyAngleStrahler(G)
+moyAngle,moyAngle_e = MoyAngleStrahler(G)
 
 def setRoot(root):
     root_patch.center = root;
@@ -1333,10 +1321,6 @@ def onpick(event):
     select_patch.center = select
     plot_graph(G)
     fig.canvas.draw()
-     
-
-
-    
 
 undo_stack = []
 
@@ -1461,9 +1445,6 @@ def keypress(event):
         plt.gca().add_patch(Cercle[p])
         plot_graph(G)        
         fig.canvas.draw()   
-        
-  
-
 
         
 # register the event callback functions
@@ -1478,6 +1459,8 @@ fig.canvas.mpl_connect('key_press_event', keypress)
 
         
 report(G)
+if superposed:
+    print("WARNING, the presented image has superposed parts, the proposed solution is experimental, if you are not satisfied with the proposed cuts in the image, it is suggested to manually cut the problematic sections and try again.")
 plt.tight_layout()
 
 # show the plot - program pauses here for as long as the window is open
@@ -1508,11 +1491,3 @@ print('Saving the database...')
 of = open(leavesFile, "wt")
 json.dump(leaves, of, sort_keys=True, indent=2, separators=(',', ': '))
 print('done.')
-
-
-
-
-
-
-
-
