@@ -2,12 +2,6 @@
 
 MorphoSnake is a leaf and thallus morphometry program written in Python.
 
-Authors: Fredrik Jansson (fjansson at abo dot fi),
-	 Pirom Konglerd,
-         Catherine Reeb
-
-
-
 ## Installation
 
 ### Ubuntu and Debian-like Linux distributions
@@ -22,8 +16,7 @@ Authors: Fredrik Jansson (fjansson at abo dot fi),
     sudo pacman -S python-pip python-numpy python-scipy python-matplotlib python-networkx
     sudo pip install mahotas imread scikit-image
 
-Please note: MorphoSnake currently depends on networkx version 1.x, while some distributions already ship 2.0.
-Until MorphoSnake is updated, networkx 1.x can be installed locally, e.g. in a virtual environment, with pip3 install 'networkx<2.0'.
+Morphosnake should work with both networkx 1.x and 2.x.
 
 
 ## Usage and Measurements
@@ -87,3 +80,13 @@ program remember the selected root for each image beteen runs of the program.
 
 MorphoSnake is released under the GNU General Public License v3.0,
 see the file LICENSE for details.
+
+## Contributors
+
+* Fredrik Jansson (fjansson at abo dot fi) - initial implementation
+* Catherine Reeb - methodology, measurement definitions, testing
+* Pirom Konglerd - measurement methods
+* Roque Giordano - updates for NetworkX 2.x
+
+
+
